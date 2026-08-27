@@ -1,13 +1,21 @@
-
 const videos = [...document.querySelectorAll('video')];
 const audio = document.getElementById('nasheed');
 
+let musicStarted = false;
+
+function playMusic() {
+  if (!audio || musicStarted) return;
+  audio.volume = 0.72;
+  audio.play().then(() => {
+    musicStarted = true;
+  }).catch(() => {
+    // Browser blocked audible autoplay; the next user gesture will retry.
+  });
+}
+
 function startMedia() {
   videos.forEach(v => v.play().catch(() => {}));
-  if (audio) {
-    audio.volume = 0.72;
-    audio.play().catch(() => {});
-  }
+  playMusic();
 }
 
 const observer = new IntersectionObserver(entries => {
@@ -20,15 +28,22 @@ const observer = new IntersectionObserver(entries => {
 
 videos.forEach(v => observer.observe(v));
 
-/*
-  There is intentionally NO Enter Invitation screen and NO music icon.
-  Modern browsers require a user gesture before audible autoplay.
-  The first tap, click, touch, wheel, key press, or scroll starts the nasheed.
-*/
-["pointerdown", "touchstart", "wheel", "keydown", "scroll"].forEach(type => {
-  window.addEventListener(type, startMedia, { passive: true, once: true });
+// Start the nasheed on the first real interaction with the invitation.
+['pointerdown', 'touchend', 'click', 'keydown', 'wheel', 'scroll'].forEach(type => {
+  window.addEventListener(type, startMedia, { passive: true });
 });
 
-window.addEventListener("load", () => {
+window.addEventListener('load', () => {
   videos.forEach(v => v.play().catch(() => {}));
+  if (audio) {
+    audio.load();
+    // Try once on load; browsers may allow it if the user has previously interacted with the site.
+    audio.play().then(() => {
+      musicStarted = true;
+    }).catch(() => {});
+  }
 });
+
+if (audio) {
+  audio.addEventListener('canplaythrough', playMusic, { once: true });
+}
